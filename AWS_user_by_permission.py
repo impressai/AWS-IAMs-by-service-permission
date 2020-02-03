@@ -7,7 +7,10 @@ import re
 
 SERVICE_MAPPING = {
     "kms": "Amazon Key Management Service",
-    "iam": "AWS Identity and Access Management"
+    "iam": "AWS Identity and Access Management",
+    "ec2": "Amazon Elastic Compute Cloud",
+    "s3": "Amazon Simple Storage Service",
+    "rds": "Amazon Relational Database Service"
 }
 
 
