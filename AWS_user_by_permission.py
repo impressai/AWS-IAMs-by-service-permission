@@ -65,7 +65,16 @@ def get_permissions_from_policy_doc(policy_doc):
     doc_permissions = []
     policy_doc_statements = policy_doc.get("Statement", [])
     for statement in policy_doc_statements:
+        statement_effect = statement.get("Effect", "Allow")
+        if statement_effect == "deny":
+            continue
+
+        statement_resources = statement.get("Resource", [])
         statement_actions = statement.get("Action", [])
+        if statement_resources == "*" or "*" in statement_resources:
+            if statement_actions == "*" or "*" in statement_actions:
+                doc_permissions.append("*:*")
+
         doc_permissions += statement_actions
     return doc_permissions
 
@@ -76,9 +85,11 @@ def filter_service_permissions(permission_list, service_prefix=None):
         return permission_list
 
     result = []
-    service_regex = "^{0}".format(service_prefix)
+    service_regex = "^(\*|{0}):".format(service_prefix)
     for permission in permission_list:
         if re.match(service_regex, permission):
+            if permission == "*:*":
+                permission = "*"
             result.append(permission)
     return result
 
@@ -146,9 +157,15 @@ def get_verbose_service_name(prefix):
 def main(service, profile, output):
     session = boto3.Session(profile_name=profile)
     client = session.client("iam")
+    if service == "all":
+        auth_document = client.get_account_authorization_details()
+        write_results_to_file(auth_document)
+        return
+
     auth_document = client.get_account_authorization_details(
         Filter=["User", "Role", "Group", "LocalManagedPolicy", "AWSManagedPolicy"]
     )
+
     user_list = get_users_with_service_permissions(auth_document, service)
     result = {
         "service": get_verbose_service_name(service),
